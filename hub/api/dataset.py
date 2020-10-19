@@ -20,6 +20,7 @@ import hub.utils as utils
 from hub.exceptions import OverwriteIsNotSafeException
 from hub.utils import MetaStorage
 import tensorflow as tf
+import torch
 DynamicTensor = dynamic_tensor.DynamicTensor
 MetaStorage = utils.MetaStorage
 
@@ -209,6 +210,9 @@ class Dataset:
 
         else:
             raise TypeError("type {} isn't supported in dataset slicing".format(type(slice_)))
+    
+    def to_pytorch(self, Transform=None):
+        return TorchDataset(self, Transform)
 
     def to_tensorflow(self):
         def tf_gen():
@@ -271,3 +275,75 @@ def open(
     url: str = None, token=None, num_samples: int = None, mode: str = None
 ) -> Dataset:
     raise NotImplementedError()
+
+
+class TorchDataset:
+    def __init__(self, ds, transform=None):
+        self._ds = ds
+        self._transform = transform
+        # self._dynkeys = {
+        #     key for key in self._ds.keys() if _is_tensor_dynamic(self._ds[key])
+        # }
+        # self._max_text_len = max_text_len
+
+        # def cost(nbytes, time):
+        #     print(nbytes, time)
+        #     return float(time) / (nbytes or 1) / 1e9
+
+        # self.client = None
+
+    def _do_transform(self, data):
+        return self._transform(data) if self._transform else data
+
+    def __len__(self):
+        return self._ds.shape[0]
+
+    def __getitem__(self, index):
+        d = {}
+        for key in self._ds._tensors.keys():
+            split_key = key.split("/")
+            cur = d
+            for i in range(1, len(split_key) - 1):
+                if split_key[i] in cur.keys():
+                    cur = cur[split_key[i]]
+                else:
+                    cur[split_key[i]] = {}
+                    cur = cur[split_key[i]]
+            cur[split_key[-1]] = torch.tensor(self._ds._tensors[key][index])
+        return d
+
+    def __iter__(self):
+        for index in range(self.shape[0]):
+            d = {}
+            for key in self._ds._tensors.keys():
+                split_key = key.split("/")
+                cur = d
+                for i in range(1, len(split_key) - 1):
+                    if split_key[i] in cur.keys():
+                        cur = cur[split_key[i]]
+                    else:
+                        cur[split_key[i]] = {}
+                        cur = cur[split_key[i]]
+                cur[split_key[-1]] = torch.tensor(self._tensors[key][index])
+            yield(d)
+
+    # def _to_tensor(self, key, sample):
+    #     if key not in self._dynkeys:
+    #         # if isinstance(sample, np.str_):
+    #         #     sample = np.array([ ord(x) for x in sample.tolist()[0:self._max_text_len] ])
+    #         #     sample=np.pad(sample, (0, self._max_text_len-len(sample)), 'constant',constant_values=(32))
+    #         return torch.tensor(sample)
+    #     else:
+    #         return [torch.tensor(item) for item in sample]
+
+    # def collate_fn(self, batch):
+    #     batch = tuple(batch)
+    #     keys = tuple(batch[0].keys())
+    #     ans = {key: [item[key] for item in batch] for key in keys}
+
+    #     for key in keys:
+    #         if key not in self._dynkeys:
+    #             ans[key] = torch.stack(ans[key], dim=0, out=None)
+
+    #     return ans
+
