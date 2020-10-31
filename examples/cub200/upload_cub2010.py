@@ -19,8 +19,7 @@ class CubGenerator(Transform):
 		}
 	
 	def forward(self, image_info):
-		ds = {}
-		ds["labels"] = np.empty(1, dtype="str")
+		ds = {"labels": np.empty(1, dtype="str")}
 		ds["labels"][0] = image_info["label"]
 
 		ds["image"] = np.empty(1, object)
@@ -28,7 +27,7 @@ class CubGenerator(Transform):
 
 		ds["__header__"] = np.empty(1, object)
 		ds["__header__"][0] = image_info["anno"]["__header__"]
-		
+
 		ds["__version__"] = np.empty(1, object)
 		ds["__version__"][0] = image_info["anno"]["__version__"]
 
@@ -61,8 +60,7 @@ def load_dataset(path):
 		if os.path.exists(os.path.join(path, "images", image )):
 			image_info_list.append(image_info)
 
-	ds = dataset.generate(CubGenerator(), image_info_list)
-	return ds
+	return dataset.generate(CubGenerator(), image_info_list)
 
 
 if __name__ == "__main__":
