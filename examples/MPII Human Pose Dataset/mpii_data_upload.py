@@ -104,17 +104,13 @@ def load_dataset():
 
         instances = json.load(f)
 
-    annotations = []
-
-    for i in range(len(instances)):
-        annotations.append(instances[i])
-
+    annotations = [instance for instance in instances]
 #    print(annotations[:5])
     print("Annotations loaded.")
-    
+
     ds = dataset.generate(MPIIGenerator(), annotations)
     print("Dataset generated.")
-    
+
     return ds
 
 def main():
